@@ -1,16 +1,25 @@
-# perfumeshelf_app
+# PerfumeShelf
 
-A new Flutter project.
+Project ini dipisah menjadi dua aplikasi:
 
-## Getting Started
+- `frontend/`: aplikasi Flutter untuk tampilan PerfumeShelf.
+- `backend/`: aplikasi Laravel untuk API/backend.
 
-This project is a starting point for a Flutter application.
+## Menjalankan Frontend
 
-A few resources to get you started if this is your first Flutter project:
+```powershell
+cd frontend
+flutter pub get
+flutter run
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Menjalankan Backend
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+cd backend
+composer install
+php artisan serve
+```
+
+Backend dibuat dengan Laravel 9 karena PHP lokal saat ini versi 8.0.30.
+Untuk Laravel terbaru, upgrade PHP ke versi yang lebih baru terlebih dahulu.
