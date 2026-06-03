@@ -1,22 +1,55 @@
 import 'package:flutter/material.dart';
 
 import '../data/sample_perfumes.dart';
+import '../data/shared_reviews.dart';
+import '../models/app_user.dart';
 import '../models/perfume.dart';
+import '../services/auth_api.dart';
+import '../services/perfume_api.dart';
 import '../theme/app_colors.dart';
 import '../widgets/perfume_photo.dart';
+import '../widgets/rating_stars.dart';
 import 'perfume_detail_page.dart';
 import 'perfume_form_page.dart';
 import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final AppUser user;
+
+  const HomePage({super.key, required this.user});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final List<Perfume> perfumes = samplePerfumes();
+  final authApi = AuthApi();
+  final perfumeApi = PerfumeApi();
+  List<Perfume> perfumes = samplePerfumes();
+  late AppUser currentUser;
+  bool isLoading = true;
+  int selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    currentUser = widget.user;
+    loadPerfumes();
+  }
+
+  Future<void> loadPerfumes() async {
+    try {
+      final data = await perfumeApi.fetchPerfumes();
+      if (!mounted) return;
+      setState(() {
+        perfumes = data;
+        isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+    }
+  }
 
   Future<void> addPerfume() async {
     final result = await Navigator.push<Perfume>(
@@ -26,13 +59,23 @@ class _HomePageState extends State<HomePage> {
 
     if (result == null || !mounted) return;
 
-    setState(() {
-      perfumes.add(result);
-    });
+    try {
+      final savedPerfume = await perfumeApi.createPerfume(result);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Data parfum berhasil ditambahkan')),
-    );
+      setState(() {
+        perfumes.insert(0, savedPerfume);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data parfum berhasil ditambahkan')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal menyimpan parfum ke server')),
+      );
+    }
   }
 
   Future<void> openDetail(int index) async {
@@ -46,34 +89,123 @@ class _HomePageState extends State<HomePage> {
     if (result == null || !mounted) return;
 
     if (result['action'] == 'delete') {
-      setState(() {
-        perfumes.removeAt(index);
-      });
+      try {
+        await perfumeApi.deletePerfume(perfumes[index]);
+        if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data parfum berhasil dihapus')),
-      );
+        setState(() {
+          perfumes.removeAt(index);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data parfum berhasil dihapus')),
+        );
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menghapus parfum dari server')),
+        );
+      }
     }
 
     if (result['action'] == 'update') {
+      try {
+        final savedPerfume = await perfumeApi.updatePerfume(result['perfume']);
+        if (!mounted) return;
+
+        setState(() {
+          perfumes[index] = savedPerfume;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data parfum berhasil diperbarui')),
+        );
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menyimpan perubahan ke server')),
+        );
+      }
+    }
+  }
+
+  Future<void> openProfile() async {
+    final updatedUser = await Navigator.push<AppUser>(
+      context,
+      MaterialPageRoute(builder: (_) => ProfilePage(user: currentUser)),
+    );
+
+    if (updatedUser == null || !mounted) return;
+
+    setState(() => currentUser = updatedUser);
+  }
+
+  void deleteReview(ReviewEntry entry) {
+    setState(() {
+      SharedReviews.removeReview(entry.perfumeName, entry.review);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Komentar user berhasil dihapus')),
+    );
+  }
+
+  Future<void> deleteUserReviews(ReviewEntry entry) async {
+    final review = entry.review;
+
+    if (review.reviewerEmail.trim().isEmpty) {
       setState(() {
-        perfumes[index] = result['perfume'];
+        SharedReviews.removeReviewsByUser(review.reviewerName);
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data parfum berhasil diperbarui')),
+        SnackBar(
+          content: Text('Review dari ${review.reviewerName} berhasil dihapus'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await authApi.banUser(
+        name: review.reviewerName,
+        email: review.reviewerEmail,
+      );
+      if (!mounted) return;
+
+      setState(() {
+        SharedReviews.removeReviewsByUser(review.reviewerName);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'User ${review.reviewerName} berhasil diban oleh admin',
+          ),
+        ),
+      );
+    } on AuthApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        SharedReviews.removeReviewsByUser(review.reviewerName);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${error.message}. Review tetap dihapus.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal menghapus user dari server')),
       );
     }
   }
 
-  void openProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ProfilePage()),
-    );
-  }
-
   Widget buildHomeContent() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (perfumes.isEmpty) {
       return const Center(
         child: Text(
@@ -83,95 +215,251 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Koleksi Parfum Kamu',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Kelola daftar parfum pribadi secara sederhana.',
-          style: TextStyle(color: Colors.grey),
-        ),
-        const SizedBox(height: 18),
-        ...List.generate(perfumes.length, (index) {
-          final perfume = perfumes[index];
-
-          return Card(
-            color: AppColors.card,
-            elevation: 3,
-            margin: const EdgeInsets.only(bottom: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: () => openDetail(index),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    PerfumePhoto(imageUrl: perfume.imageUrl),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            perfume.namaParfum,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${perfume.merek} - ${perfume.aroma}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text('Status: ${perfume.status}'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.arrow_forward_ios, size: 16),
-                  ],
-                ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          children: [
+            const Text(
+              'Katalog Parfum Publik',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textDark,
               ),
             ),
-          );
-        }),
-      ],
+            const SizedBox(height: 6),
+            const Text(
+              'Sebagai admin, kelola daftar parfum yang tampil untuk publik.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 18),
+            ...List.generate(perfumes.length, (index) {
+              final perfume = perfumes[index];
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => openDetail(index),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        PerfumePhoto(imageUrl: perfume.imageUrl),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                perfume.namaParfum,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${perfume.merek} - ${perfume.aroma}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withValues(
+                                    alpha: 0.10,
+                                  ),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  perfume.status,
+                                  style: const TextStyle(
+                                    color: AppColors.accent,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: AppColors.textMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget buildReviewContent() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          children: [
+            const Text(
+              'Review User',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Lihat komentar pengguna dan hapus review yang tidak sesuai.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            if (SharedReviews.allReviews().isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Belum ada review user.',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+              )
+            else
+              ...SharedReviews.allReviews().map((entry) {
+                final review = entry.review;
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    review.reviewerName,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    entry.perfumeName,
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            RatingStars(rating: review.rating, size: 18),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(review.comment),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.danger,
+                                  side: const BorderSide(
+                                    color: AppColors.danger,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                onPressed: () => deleteReview(entry),
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Hapus Komentar'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(
+                                    color: AppColors.primary,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                onPressed: () => deleteUserReviews(entry),
+                                icon: const Icon(Icons.person_remove),
+                                label: const Text('Hapus User'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildSelectedContent() {
+    if (selectedIndex == 1) {
+      return buildReviewContent();
+    }
+
+    return buildHomeContent();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin PerfumeShelf'),
+        title: Text(currentUser.name),
         actions: [
           IconButton(icon: const Icon(Icons.person), onPressed: openProfile),
         ],
       ),
-      body: buildHomeContent(),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: addPerfume,
-        child: const Icon(Icons.add),
-      ),
+      body: buildSelectedContent(),
+      floatingActionButton: selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: addPerfume,
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black12,
@@ -181,20 +469,23 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         child: BottomNavigationBar(
-          backgroundColor: Colors.white,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: Colors.grey,
-          currentIndex: 0,
+          currentIndex: selectedIndex,
           type: BottomNavigationBarType.fixed,
           onTap: (index) {
-            if (index == 1) {
+            if (index == 2) {
               addPerfume();
-            } else if (index == 2) {
+            } else if (index == 3) {
               openProfile();
+            } else {
+              setState(() => selectedIndex = index);
             }
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.rate_review),
+              label: 'Review',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.add_circle_outline),
               label: 'Tambah',

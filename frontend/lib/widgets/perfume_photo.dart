@@ -23,7 +23,10 @@ class PerfumePhoto extends StatelessWidget {
       child: Container(
         width: width,
         height: height,
-        color: AppColors.background,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border),
+        ),
         child: imageUrl.trim().isEmpty
             ? const _PerfumePlaceholder()
             : Image.network(
@@ -58,7 +61,7 @@ class _PerfumePlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF8F3EC), Color(0xFFE6C47A)],
+          colors: [Color(0xFFFFFFFF), Color(0xFFE7C56D)],
         ),
       ),
       child: Center(child: Icon(Icons.spa, color: AppColors.primary, size: 34)),

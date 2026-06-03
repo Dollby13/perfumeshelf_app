@@ -1,44 +1,61 @@
 import 'package:flutter/material.dart';
 
 import '../data/sample_perfumes.dart';
+import '../data/shared_reviews.dart';
+import '../models/app_user.dart';
 import '../models/perfume.dart';
 import '../models/perfume_review.dart';
+import '../services/perfume_api.dart';
 import '../theme/app_colors.dart';
 import '../widgets/perfume_photo.dart';
 import '../widgets/rating_stars.dart';
+import 'login_page.dart';
 import 'profile_page.dart';
+import 'register_page.dart';
 import 'user_perfume_detail_page.dart';
 
 class UserHomePage extends StatefulWidget {
-  const UserHomePage({super.key});
+  final AppUser? user;
+  final bool isGuest;
+
+  const UserHomePage({super.key, this.user, this.isGuest = false});
 
   @override
   State<UserHomePage> createState() => _UserHomePageState();
 }
 
 class _UserHomePageState extends State<UserHomePage> {
+  final perfumeApi = PerfumeApi();
   final searchController = TextEditingController();
-  final perfumes = samplePerfumes();
-  final Map<String, List<PerfumeReview>> reviewsByPerfume = {
-    'Dior Sauvage': [
-      PerfumeReview(
-        reviewerName: 'Raka',
-        rating: 5,
-        comment: 'Fresh, maskulin, dan tahan lama untuk aktivitas sore.',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ],
-    'Bleu de Chanel': [
-      PerfumeReview(
-        reviewerName: 'Nadia',
-        rating: 4,
-        comment: 'Aromanya bersih dan elegan, cocok untuk kantor.',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-    ],
-  };
+  List<Perfume> perfumes = samplePerfumes();
+  AppUser? currentUser;
+  bool isLoading = true;
+
+  Map<String, List<PerfumeReview>> get reviewsByPerfume =>
+      SharedReviews.reviewsByPerfume;
 
   String query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    currentUser = widget.user;
+    loadPerfumes();
+  }
+
+  Future<void> loadPerfumes() async {
+    try {
+      final data = await perfumeApi.fetchPerfumes();
+      if (!mounted) return;
+      setState(() {
+        perfumes = data;
+        isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -73,6 +90,9 @@ class _UserHomePageState extends State<UserHomePage> {
         builder: (_) => UserPerfumeDetailPage(
           perfume: perfume,
           reviews: List.of(reviewsByPerfume[perfume.namaParfum] ?? []),
+          isGuest: widget.isGuest,
+          reviewerName: currentUser?.name ?? 'User PerfumeShelf',
+          reviewerEmail: currentUser?.email ?? '',
         ),
       ),
     );
@@ -80,9 +100,7 @@ class _UserHomePageState extends State<UserHomePage> {
     if (result == null || !mounted) return;
 
     setState(() {
-      reviewsByPerfume
-          .putIfAbsent(perfume.namaParfum, () => [])
-          .insert(0, result);
+      SharedReviews.addReview(perfume.namaParfum, result);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -90,11 +108,26 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
-  void openProfile() {
-    Navigator.push(
+  Future<void> openProfile() async {
+    if (widget.isGuest) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+      return;
+    }
+
+    final user = currentUser;
+    if (user == null) return;
+
+    final updatedUser = await Navigator.push<AppUser>(
       context,
-      MaterialPageRoute(builder: (_) => const ProfilePage()),
+      MaterialPageRoute(builder: (_) => ProfilePage(user: user)),
     );
+
+    if (updatedUser == null || !mounted) return;
+
+    setState(() => currentUser = updatedUser);
   }
 
   @override
@@ -103,133 +136,228 @@ class _UserHomePageState extends State<UserHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Katalog Parfum'),
+        title: Text(widget.isGuest ? 'Guest Preview' : 'Katalog Parfum'),
         actions: [
-          IconButton(icon: const Icon(Icons.person), onPressed: openProfile),
+          IconButton(
+            icon: Icon(widget.isGuest ? Icons.login : Icons.person),
+            onPressed: openProfile,
+          ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _SummaryCard(
-                  title: '${perfumes.length}',
-                  subtitle: 'Parfum',
-                  icon: Icons.spa,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _SummaryCard(
-                  title:
-                      '${reviewsByPerfume.values.expand((item) => item).length}',
-                  subtitle: 'Review',
-                  icon: Icons.rate_review,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: searchController,
-            onChanged: (value) => setState(() => query = value),
-            decoration: const InputDecoration(
-              hintText: 'Cari parfum, merek, atau aroma',
-              prefixIcon: Icon(Icons.search),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Temukan Parfum',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Beri rating dan bagikan pengalaman kamu setelah mencoba parfum.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 18),
-          if (shownPerfumes.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 56),
-              child: Center(
-                child: Text(
-                  'Parfum tidak ditemukan',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            ...shownPerfumes.map((perfume) {
-              final average = averageRating(perfume);
-              final reviews = reviewsByPerfume[perfume.namaParfum] ?? [];
-
-              return Card(
-                color: AppColors.card,
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: () => openPerfume(perfume),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 820),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: LinearProgressIndicator(),
+                      ),
+                    Row(
                       children: [
-                        PerfumePhoto(imageUrl: perfume.imageUrl),
-                        const SizedBox(width: 16),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                perfume.namaParfum,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '${perfume.merek} - ${perfume.aroma}',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  RatingStars(
-                                    rating: average.round(),
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    average == 0
-                                        ? 'Belum ada rating'
-                                        : '${average.toStringAsFixed(1)} (${reviews.length})',
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          child: _SummaryCard(
+                            title: '${perfumes.length}',
+                            subtitle: 'Parfum',
+                            icon: Icons.spa,
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        const Icon(Icons.chevron_right),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _SummaryCard(
+                            title:
+                                '${reviewsByPerfume.values.expand((item) => item).length}',
+                            subtitle: 'Review',
+                            icon: Icons.rate_review,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: searchController,
+                      onChanged: (value) => setState(() => query = value),
+                      decoration: const InputDecoration(
+                        hintText: 'Cari parfum, merek, atau aroma',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Temukan Parfum',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Beri rating dan bagikan pengalaman kamu setelah mencoba parfum.',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                    if (widget.isGuest) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.accent.withValues(alpha: 0.30),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.visibility, color: AppColors.accent),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Mode Guest: kamu bisa melihat katalog. Login untuk memberi rating dan review.',
+                                style: TextStyle(color: AppColors.textDark),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(
+                                  color: AppColors.primary,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 13,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginPage(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.login),
+                              label: const Text('Login'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterPage(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.person_add),
+                              label: const Text('Register'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    if (shownPerfumes.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 56),
+                        child: Center(
+                          child: Text(
+                            'Parfum tidak ditemukan',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    else
+                      ...shownPerfumes.map((perfume) {
+                        final average = averageRating(perfume);
+                        final reviews =
+                            reviewsByPerfume[perfume.namaParfum] ?? [];
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => openPerfume(perfume),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  PerfumePhoto(imageUrl: perfume.imageUrl),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          perfume.namaParfum,
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.textDark,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '${perfume.merek} - ${perfume.aroma}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            RatingStars(
+                                              rating: average.round(),
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              average == 0
+                                                  ? 'Belum ada rating'
+                                                  : '${average.toStringAsFixed(1)} (${reviews.length})',
+                                              style: const TextStyle(
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Icon(Icons.chevron_right),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
                 ),
-              );
-            }),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -252,8 +380,9 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3)),
         ],
@@ -261,7 +390,7 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: AppColors.secondary,
+            backgroundColor: AppColors.accent,
             child: Icon(icon, color: Colors.white),
           ),
           const SizedBox(width: 12),

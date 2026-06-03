@@ -29,7 +29,7 @@ class RatingStars extends StatelessWidget {
             padding: const EdgeInsets.only(right: 2),
             child: Icon(
               selected ? Icons.star : Icons.star_border,
-              color: selected ? AppColors.secondary : Colors.grey.shade400,
+              color: selected ? AppColors.secondary : AppColors.textMuted,
               size: size,
             ),
           ),

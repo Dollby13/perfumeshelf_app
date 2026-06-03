@@ -55,7 +55,10 @@ class PerfumeDetailPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          Text(
+            title,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+          ),
           const SizedBox(height: 4),
           Text(
             value,
@@ -74,59 +77,62 @@ class PerfumeDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Parfum')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Card(
-          color: Colors.white,
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Padding(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: ListView(
             padding: const EdgeInsets.all(20),
-            child: ListView(
-              children: [
-                Center(
-                  child: PerfumePhoto(
-                    imageUrl: perfume.imageUrl,
-                    width: 170,
-                    height: 210,
-                    borderRadius: 18,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: PerfumePhoto(
+                          imageUrl: perfume.imageUrl,
+                          width: 170,
+                          height: 210,
+                          borderRadius: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      detailItem('Nama Parfum', perfume.namaParfum),
+                      detailItem('Merek', perfume.merek),
+                      detailItem('Aroma', perfume.aroma),
+                      detailItem('Ukuran', perfume.ukuran),
+                      detailItem('Konsentrasi', perfume.konsentrasi),
+                      detailItem('Status', perfume.status),
+                      detailItem('Catatan', perfume.catatan),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => editPerfume(context),
+                              icon: const Icon(Icons.edit),
+                              label: const Text('Edit'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.danger,
+                              ),
+                              onPressed: () => confirmDelete(context),
+                              icon: const Icon(Icons.delete),
+                              label: const Text('Hapus'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                detailItem('Nama Parfum', perfume.namaParfum),
-                detailItem('Merek', perfume.merek),
-                detailItem('Aroma', perfume.aroma),
-                detailItem('Ukuran', perfume.ukuran),
-                detailItem('Konsentrasi', perfume.konsentrasi),
-                detailItem('Status', perfume.status),
-                detailItem('Catatan', perfume.catatan),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => editPerfume(context),
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.danger,
-                        ),
-                        onPressed: () => confirmDelete(context),
-                        icon: const Icon(Icons.delete),
-                        label: const Text('Hapus'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

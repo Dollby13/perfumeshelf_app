@@ -9,11 +9,17 @@ import '../widgets/rating_stars.dart';
 class UserPerfumeDetailPage extends StatefulWidget {
   final Perfume perfume;
   final List<PerfumeReview> reviews;
+  final bool isGuest;
+  final String reviewerName;
+  final String reviewerEmail;
 
   const UserPerfumeDetailPage({
     super.key,
     required this.perfume,
     required this.reviews,
+    this.isGuest = false,
+    this.reviewerName = 'User PerfumeShelf',
+    this.reviewerEmail = '',
   });
 
   @override
@@ -21,9 +27,15 @@ class UserPerfumeDetailPage extends StatefulWidget {
 }
 
 class _UserPerfumeDetailPageState extends State<UserPerfumeDetailPage> {
-  final nameController = TextEditingController(text: 'User PerfumeShelf');
+  late final TextEditingController nameController;
   final reviewController = TextEditingController();
   int rating = 5;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.reviewerName);
+  }
 
   @override
   void dispose() {
@@ -53,9 +65,10 @@ class _UserPerfumeDetailPageState extends State<UserPerfumeDetailPage> {
     Navigator.pop(
       context,
       PerfumeReview(
-        reviewerName: nameController.text.trim().isEmpty
+        reviewerName: widget.reviewerName.trim().isEmpty
             ? 'User PerfumeShelf'
-            : nameController.text.trim(),
+            : widget.reviewerName.trim(),
+        reviewerEmail: widget.reviewerEmail,
         rating: rating,
         comment: reviewController.text.trim(),
         createdAt: DateTime.now(),
@@ -71,7 +84,10 @@ class _UserPerfumeDetailPageState extends State<UserPerfumeDetailPage> {
         children: [
           SizedBox(
             width: 96,
-            child: Text(title, style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              title,
+              style: const TextStyle(color: AppColors.textMuted),
+            ),
           ),
           Expanded(
             child: Text(
@@ -91,187 +107,214 @@ class _UserPerfumeDetailPageState extends State<UserPerfumeDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Review Parfum')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            color: Colors.white,
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      PerfumePhoto(
-                        imageUrl: widget.perfume.imageUrl,
-                        width: 112,
-                        height: 140,
-                        borderRadius: 18,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.perfume.namaParfum,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${widget.perfume.merek} - ${widget.perfume.aroma}',
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                RatingStars(
-                                  rating: averageRating.round(),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  averageRating == 0
-                                      ? 'Belum ada rating'
-                                      : averageRating.toStringAsFixed(1),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  detailItem('Ukuran', widget.perfume.ukuran),
-                  detailItem('Konsentrasi', widget.perfume.konsentrasi),
-                  detailItem('Catatan', widget.perfume.catatan),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            color: Colors.white,
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Beri Review',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama',
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  RatingStars(
-                    rating: rating,
-                    size: 34,
-                    onChanged: (value) => setState(() => rating = value),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: reviewController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Review kamu',
-                      prefixIcon: Icon(Icons.rate_review),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: submitReview,
-                      icon: const Icon(Icons.send),
-                      label: const Text('Kirim Review'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Review Pengguna',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (widget.reviews.isEmpty)
-            const Card(
-              color: Colors.white,
-              child: Padding(
-                padding: EdgeInsets.all(18),
-                child: Text(
-                  'Belum ada review. Jadilah yang pertama memberi review.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            ...widget.reviews.map((review) {
-              return Card(
-                color: Colors.white,
-                margin: const EdgeInsets.only(bottom: 10),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          PerfumePhoto(
+                            imageUrl: widget.perfume.imageUrl,
+                            width: 112,
+                            height: 140,
+                            borderRadius: 8,
+                          ),
+                          const SizedBox(width: 16),
                           Expanded(
-                            child: Text(
-                              review.reviewerName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.perfume.namaParfum,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${widget.perfume.merek} - ${widget.perfume.aroma}',
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    RatingStars(
+                                      rating: averageRating.round(),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      averageRating == 0
+                                          ? 'Belum ada rating'
+                                          : averageRating.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          RatingStars(rating: review.rating, size: 18),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(review.comment),
+                      const SizedBox(height: 18),
+                      detailItem('Ukuran', widget.perfume.ukuran),
+                      detailItem('Konsentrasi', widget.perfume.konsentrasi),
+                      detailItem('Catatan', widget.perfume.catatan),
                     ],
                   ),
                 ),
-              );
-            }),
-        ],
+              ),
+              const SizedBox(height: 16),
+              if (widget.isGuest)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.visibility, color: AppColors.accent),
+                            SizedBox(width: 10),
+                            Text(
+                              'Mode Guest',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Kamu bisa membaca detail dan review parfum. Untuk memberi rating atau menulis review, silakan login atau register terlebih dahulu.',
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Beri Review',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: nameController,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Nama',
+                            prefixIcon: Icon(Icons.person),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        RatingStars(
+                          rating: rating,
+                          size: 34,
+                          onChanged: (value) => setState(() => rating = value),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: reviewController,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                            labelText: 'Review kamu',
+                            prefixIcon: Icon(Icons.rate_review),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: submitReview,
+                            icon: const Icon(Icons.send),
+                            label: const Text('Kirim Review'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              const Text(
+                'Review Pengguna',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (widget.reviews.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(18),
+                    child: Text(
+                      'Belum ada review. Jadilah yang pertama memberi review.',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                  ),
+                )
+              else
+                ...widget.reviews.map((review) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  review.reviewerName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ),
+                              RatingStars(rating: review.rating, size: 18),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(review.comment),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+            ],
+          ),
+        ),
       ),
     );
   }

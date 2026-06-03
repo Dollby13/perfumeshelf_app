@@ -40,6 +40,41 @@ class AuthApi {
     return _parseAuthResponse(response);
   }
 
+  Future<AppUser> updateProfile(AppUser user) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/profile'),
+      headers: const {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': user.email,
+        'name': user.name,
+        'phone': user.phone,
+        'bio': user.bio,
+      }),
+    );
+
+    return _parseAuthResponse(response);
+  }
+
+  Future<void> banUser({required String name, required String email}) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/users/by-name'),
+      headers: const {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'name': name, 'email': email}),
+    );
+
+    if (response.statusCode >= 400) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final message = _messageFromError(body);
+      throw AuthApiException(message);
+    }
+  }
+
   AppUser _parseAuthResponse(http.Response response) {
     final body = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -56,6 +91,8 @@ class AuthApi {
       email: user['email'] as String,
       password: '',
       role: role,
+      phone: user['phone']?.toString() ?? '',
+      bio: user['bio']?.toString() ?? '',
     );
   }
 

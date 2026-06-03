@@ -61,57 +61,60 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Register')),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ListView(
-            children: [
-              const Text(
-                'Buat Akun Baru',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const Text(
+                  'Buat Akun Baru',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Daftar sebagai user untuk memberi rating dan review parfum.',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 28),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  hintText: 'Nama lengkap',
-                  prefixIcon: Icon(Icons.person),
+                const SizedBox(height: 8),
+                const Text(
+                  'Daftar sebagai user untuk memberi rating dan review parfum.',
+                  style: TextStyle(color: AppColors.textMuted),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  hintText: 'Email',
-                  prefixIcon: Icon(Icons.email),
+                const SizedBox(height: 28),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    hintText: 'Nama lengkap',
+                    prefixIcon: Icon(Icons.person),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  hintText: 'Password',
-                  prefixIcon: Icon(Icons.lock),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    hintText: 'Email',
+                    prefixIcon: Icon(Icons.email),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : register,
-                  child: Text(isLoading ? 'Memproses...' : 'Register'),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Password',
+                    prefixIcon: Icon(Icons.lock),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : register,
+                    child: Text(isLoading ? 'Memproses...' : 'Register'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
