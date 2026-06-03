@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/app_user.dart';
 import '../services/auth_api.dart';
@@ -16,10 +20,14 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final authApi = AuthApi();
+  final imagePicker = ImagePicker();
   late final TextEditingController nameController;
   late final TextEditingController phoneController;
   late final TextEditingController bioController;
+  late String profilePhoto;
   bool isSaving = false;
+
+  bool get canEditPhoto => widget.user.role == UserRole.user;
 
   @override
   void initState() {
@@ -27,6 +35,7 @@ class _ProfilePageState extends State<ProfilePage> {
     nameController = TextEditingController(text: widget.user.name);
     phoneController = TextEditingController(text: widget.user.phone);
     bioController = TextEditingController(text: widget.user.bio);
+    profilePhoto = widget.user.profilePhoto;
   }
 
   @override
@@ -42,6 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
       name: nameController.text.trim(),
       phone: phoneController.text.trim(),
       bio: bioController.text.trim(),
+      profilePhoto: canEditPhoto ? profilePhoto : widget.user.profilePhoto,
     );
 
     if (updatedUser.name.isEmpty) {
@@ -76,6 +86,41 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Uint8List? profilePhotoBytes() {
+    if (profilePhoto.trim().isEmpty) return null;
+
+    final parts = profilePhoto.split(',');
+    final encoded = parts.length > 1 ? parts.last : profilePhoto;
+
+    try {
+      return base64Decode(encoded);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> pickProfilePhoto() async {
+    final pickedFile = await imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 700,
+      maxHeight: 700,
+      imageQuality: 82,
+    );
+
+    if (pickedFile == null) return;
+
+    final bytes = await pickedFile.readAsBytes();
+    if (!mounted) return;
+
+    setState(() {
+      profilePhoto = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+    });
+  }
+
+  void removeProfilePhoto() {
+    setState(() => profilePhoto = '');
+  }
+
   void logout() {
     Navigator.pushAndRemoveUntil(
       context,
@@ -86,6 +131,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final photoBytes = profilePhotoBytes();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
       body: Center(
@@ -94,13 +141,109 @@ class _ProfilePageState extends State<ProfilePage> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Center(
-                child: CircleAvatar(
-                  radius: 48,
-                  backgroundColor: AppColors.primaryDark,
-                  child: Icon(Icons.person, color: Colors.white, size: 58),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryDark,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppColors.secondary,
+                      child: CircleAvatar(
+                        radius: 46,
+                        backgroundColor: AppColors.primary,
+                        backgroundImage: photoBytes == null
+                            ? null
+                            : MemoryImage(photoBytes),
+                        child: photoBytes == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 58,
+                              )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.user.name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.user.email,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFFE8DFDC)),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: AppColors.secondary.withValues(alpha: 0.34),
+                        ),
+                      ),
+                      child: Text(
+                        widget.user.role == UserRole.admin ? 'Admin' : 'User',
+                        style: const TextStyle(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (canEditPhoto) ...[
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: pickProfilePhoto,
+                        icon: const Icon(Icons.photo_camera),
+                        label: const Text('Pilih Foto'),
+                      ),
+                    ),
+                    if (profilePhoto.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      IconButton.filledTonal(
+                        color: AppColors.danger,
+                        onPressed: removeProfilePhoto,
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
               const SizedBox(height: 24),
               const Text('Nama'),
               const SizedBox(height: 8),

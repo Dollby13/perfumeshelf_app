@@ -52,6 +52,7 @@ class AuthApi {
         'name': user.name,
         'phone': user.phone,
         'bio': user.bio,
+        'profile_photo': user.profilePhoto,
       }),
     );
 
@@ -93,6 +94,7 @@ class AuthApi {
       role: role,
       phone: user['phone']?.toString() ?? '',
       bio: user['bio']?.toString() ?? '',
+      profilePhoto: user['profile_photo']?.toString() ?? '',
     );
   }
 

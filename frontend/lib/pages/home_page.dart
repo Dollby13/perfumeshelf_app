@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/sample_perfumes.dart';
@@ -9,6 +11,7 @@ import '../services/perfume_api.dart';
 import '../theme/app_colors.dart';
 import '../widgets/perfume_photo.dart';
 import '../widgets/rating_stars.dart';
+import '../widgets/app_hero_section.dart';
 import 'perfume_detail_page.dart';
 import 'perfume_form_page.dart';
 import 'profile_page.dart';
@@ -29,12 +32,51 @@ class _HomePageState extends State<HomePage> {
   late AppUser currentUser;
   bool isLoading = true;
   int selectedIndex = 0;
+  int heroImageIndex = 0;
+  Timer? heroImageTimer;
+
+  List<String> get heroImageUrls {
+    final urls = perfumes
+        .map((perfume) => perfume.imageUrl.trim())
+        .where((imageUrl) => imageUrl.isNotEmpty)
+        .toList();
+
+    if (urls.isEmpty) {
+      return [
+        'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=82',
+      ];
+    }
+
+    return urls;
+  }
+
+  String get heroImageUrl {
+    final urls = heroImageUrls;
+    return urls[heroImageIndex % urls.length];
+  }
 
   @override
   void initState() {
     super.initState();
     currentUser = widget.user;
+    startHeroImageTimer();
     loadPerfumes();
+  }
+
+  void startHeroImageTimer() {
+    heroImageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || heroImageUrls.length <= 1) return;
+
+      setState(() {
+        heroImageIndex = (heroImageIndex + 1) % heroImageUrls.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    heroImageTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> loadPerfumes() async {
@@ -65,6 +107,7 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         perfumes.insert(0, savedPerfume);
+        heroImageIndex = 0;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -201,6 +244,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  List<ReviewEntry> reviewUserEntries() {
+    final seenUsers = <String>{};
+    final users = <ReviewEntry>[];
+
+    for (final entry in SharedReviews.allReviews()) {
+      final review = entry.review;
+      final key = review.reviewerEmail.trim().isNotEmpty
+          ? review.reviewerEmail.trim().toLowerCase()
+          : review.reviewerName.trim().toLowerCase();
+
+      if (seenUsers.add(key)) {
+        users.add(entry);
+      }
+    }
+
+    return users;
+  }
+
   Widget buildHomeContent() {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -221,6 +282,17 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
+            AppHeroSection(
+              eyebrow: 'Admin dashboard',
+              title: 'Kelola katalog parfum publik',
+              description:
+                  'Pastikan koleksi, status, dan review tetap rapi agar pengguna mudah menemukan parfum yang tepat.',
+              icon: Icons.inventory_2,
+              metricLabel: 'Parfum aktif',
+              metricValue: '${perfumes.length}',
+              imageUrl: heroImageUrl,
+            ),
+            const SizedBox(height: 18),
             const Text(
               'Katalog Parfum Publik',
               style: TextStyle(
@@ -270,26 +342,17 @@ class _HomePageState extends State<HomePage> {
                                   color: AppColors.textMuted,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent.withValues(
-                                    alpha: 0.10,
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _StatusPill(label: perfume.status),
+                                  _InfoPill(
+                                    icon: Icons.local_offer_outlined,
+                                    label: perfume.konsentrasi,
                                   ),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  perfume.status,
-                                  style: const TextStyle(
-                                    color: AppColors.accent,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -319,8 +382,19 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
+            AppHeroSection(
+              eyebrow: 'Kelola coment',
+              title: 'Pantau komentar pengguna',
+              description:
+                  'Lihat komentar terbaru dan bersihkan komentar yang tidak sesuai dari ruang katalog PerfumeShelf.',
+              icon: Icons.rate_review,
+              metricLabel: 'Komentar',
+              metricValue: '${SharedReviews.allReviews().length}',
+              imageUrl: heroImageUrl,
+            ),
+            const SizedBox(height: 18),
             const Text(
-              'Review User',
+              'Kelola Coment',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -329,7 +403,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Lihat komentar pengguna dan hapus review yang tidak sesuai.',
+              'Lihat komentar pengguna dan hapus komentar yang tidak sesuai.',
               style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 12),
@@ -338,7 +412,7 @@ class _HomePageState extends State<HomePage> {
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'Belum ada review user.',
+                    'Belum ada komentar user.',
                     style: TextStyle(color: AppColors.textMuted),
                   ),
                 ),
@@ -385,42 +459,139 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 10),
                         Text(review.comment),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.danger,
-                                  side: const BorderSide(
-                                    color: AppColors.danger,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                ),
-                                onPressed: () => deleteReview(entry),
-                                icon: const Icon(Icons.delete_outline),
-                                label: const Text('Hapus Komentar'),
-                              ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.danger,
+                              side: const BorderSide(color: AppColors.danger),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                            const SizedBox(width: 10),
+                            onPressed: () => deleteReview(entry),
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Hapus Komentar'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildUserManagementContent() {
+    final users = reviewUserEntries();
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          children: [
+            AppHeroSection(
+              eyebrow: 'Kelola user',
+              title: 'Pantau user dari komentar',
+              description:
+                  'Kelola user yang memberi komentar dan hapus user yang tidak sesuai dari ruang katalog PerfumeShelf.',
+              icon: Icons.manage_accounts,
+              metricLabel: 'User aktif',
+              metricValue: '${users.length}',
+              imageUrl: heroImageUrl,
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Kelola User',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Hapus user beserta komentar yang sudah dibuat.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            if (users.isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Belum ada user dari komentar.',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+              )
+            else
+              ...users.map((entry) {
+                final review = entry.review;
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(
+                              backgroundColor: AppColors.primary,
+                              child: Icon(Icons.person, color: Colors.white),
+                            ),
+                            const SizedBox(width: 12),
                             Expanded(
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: const BorderSide(
-                                    color: AppColors.primary,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    review.reviewerName,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textDark,
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    review.reviewerEmail.trim().isEmpty
+                                        ? 'Email tidak tersedia'
+                                        : review.reviewerEmail,
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
-                                ),
-                                onPressed: () => deleteUserReviews(entry),
-                                icon: const Icon(Icons.person_remove),
-                                label: const Text('Hapus User'),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Komentar terakhir: ${entry.perfumeName}',
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () => deleteUserReviews(entry),
+                            icon: const Icon(Icons.person_remove),
+                            label: const Text('Hapus User'),
+                          ),
                         ),
                       ],
                     ),
@@ -436,6 +607,10 @@ class _HomePageState extends State<HomePage> {
   Widget buildSelectedContent() {
     if (selectedIndex == 1) {
       return buildReviewContent();
+    }
+
+    if (selectedIndex == 2) {
+      return buildUserManagementContent();
     }
 
     return buildHomeContent();
@@ -472,9 +647,9 @@ class _HomePageState extends State<HomePage> {
           currentIndex: selectedIndex,
           type: BottomNavigationBarType.fixed,
           onTap: (index) {
-            if (index == 2) {
+            if (index == 3) {
               addPerfume();
-            } else if (index == 3) {
+            } else if (index == 4) {
               openProfile();
             } else {
               setState(() => selectedIndex = index);
@@ -484,7 +659,11 @@ class _HomePageState extends State<HomePage> {
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(
               icon: Icon(Icons.rate_review),
-              label: 'Review',
+              label: 'Kelola Coment',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.manage_accounts),
+              label: 'Kelola User',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.add_circle_outline),
@@ -493,6 +672,66 @@ class _HomePageState extends State<HomePage> {
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+
+  const _StatusPill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.accent,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

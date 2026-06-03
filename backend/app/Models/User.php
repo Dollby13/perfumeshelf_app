@@ -24,6 +24,7 @@ class User extends Authenticatable
         'role',
         'phone',
         'bio',
+        'profile_photo',
         'is_banned',
     ];
 

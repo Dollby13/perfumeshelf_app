@@ -42,6 +42,7 @@ Route::post('/register', function (Request $request): JsonResponse {
             'role' => $user->role,
             'phone' => $user->phone,
             'bio' => $user->bio,
+            'profile_photo' => $user->profile_photo,
         ],
     ], 201);
 });
@@ -81,6 +82,7 @@ Route::post('/login', function (Request $request): JsonResponse {
             'role' => $user->role,
             'phone' => $user->phone,
             'bio' => $user->bio,
+            'profile_photo' => $user->profile_photo,
         ],
     ]);
 });
@@ -91,6 +93,7 @@ Route::put('/profile', function (Request $request): JsonResponse {
         'name' => ['required', 'string', 'max:255'],
         'phone' => ['nullable', 'string', 'max:30'],
         'bio' => ['nullable', 'string'],
+        'profile_photo' => ['nullable', 'string'],
     ]);
 
     $user = User::where('email', strtolower($data['email']))->first();
@@ -105,6 +108,7 @@ Route::put('/profile', function (Request $request): JsonResponse {
         'name' => $data['name'],
         'phone' => $data['phone'] ?? null,
         'bio' => $data['bio'] ?? null,
+        'profile_photo' => $data['profile_photo'] ?? null,
     ]);
 
     return response()->json([
@@ -116,6 +120,7 @@ Route::put('/profile', function (Request $request): JsonResponse {
             'role' => $user->role,
             'phone' => $user->phone,
             'bio' => $user->bio,
+            'profile_photo' => $user->profile_photo,
         ],
     ]);
 });

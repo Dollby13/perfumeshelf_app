@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/sample_perfumes.dart';
@@ -7,6 +9,7 @@ import '../models/perfume.dart';
 import '../models/perfume_review.dart';
 import '../services/perfume_api.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_hero_section.dart';
 import '../widgets/perfume_photo.dart';
 import '../widgets/rating_stars.dart';
 import 'login_page.dart';
@@ -30,9 +33,31 @@ class _UserHomePageState extends State<UserHomePage> {
   List<Perfume> perfumes = samplePerfumes();
   AppUser? currentUser;
   bool isLoading = true;
+  int heroImageIndex = 0;
+  Timer? heroImageTimer;
 
   Map<String, List<PerfumeReview>> get reviewsByPerfume =>
       SharedReviews.reviewsByPerfume;
+
+  List<String> get heroImageUrls {
+    final urls = perfumes
+        .map((perfume) => perfume.imageUrl.trim())
+        .where((imageUrl) => imageUrl.isNotEmpty)
+        .toList();
+
+    if (urls.isEmpty) {
+      return [
+        'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=1200&q=82',
+      ];
+    }
+
+    return urls;
+  }
+
+  String get heroImageUrl {
+    final urls = heroImageUrls;
+    return urls[heroImageIndex % urls.length];
+  }
 
   String query = '';
 
@@ -40,7 +65,18 @@ class _UserHomePageState extends State<UserHomePage> {
   void initState() {
     super.initState();
     currentUser = widget.user;
+    startHeroImageTimer();
     loadPerfumes();
+  }
+
+  void startHeroImageTimer() {
+    heroImageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || heroImageUrls.length <= 1) return;
+
+      setState(() {
+        heroImageIndex = (heroImageIndex + 1) % heroImageUrls.length;
+      });
+    });
   }
 
   Future<void> loadPerfumes() async {
@@ -59,6 +95,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
   @override
   void dispose() {
+    heroImageTimer?.cancel();
     searchController.dispose();
     super.dispose();
   }
@@ -160,6 +197,22 @@ class _UserHomePageState extends State<UserHomePage> {
                         padding: EdgeInsets.only(bottom: 16),
                         child: LinearProgressIndicator(),
                       ),
+                    AppHeroSection(
+                      eyebrow: widget.isGuest
+                          ? 'Guest preview'
+                          : 'Katalog pilihan',
+                      title: widget.isGuest
+                          ? 'Jelajahi parfum sebelum login'
+                          : 'Temukan aroma favoritmu',
+                      description: widget.isGuest
+                          ? 'Lihat koleksi parfum dan rating pengguna. Login untuk ikut menulis review.'
+                          : 'Cari parfum berdasarkan merek, aroma, dan pengalaman pengguna lain di PerfumeShelf.',
+                      icon: widget.isGuest ? Icons.visibility : Icons.spa,
+                      metricLabel: widget.isGuest ? 'Bisa dilihat' : 'Parfum',
+                      metricValue: '${perfumes.length}',
+                      imageUrl: heroImageUrl,
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -181,12 +234,33 @@ class _UserHomePageState extends State<UserHomePage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: searchController,
-                      onChanged: (value) => setState(() => query = value),
-                      decoration: const InputDecoration(
-                        hintText: 'Cari parfum, merek, atau aroma',
-                        prefixIcon: Icon(Icons.search),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: (value) => setState(() => query = value),
+                        decoration: InputDecoration(
+                          hintText: 'Cari parfum, merek, atau aroma',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Bersihkan pencarian',
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setState(() => query = '');
+                                  },
+                                  icon: const Icon(Icons.close),
+                                ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -325,7 +399,11 @@ class _UserHomePageState extends State<UserHomePage> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        Row(
+                                        Wrap(
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 6,
                                           children: [
                                             RatingStars(
                                               rating: average.round(),
@@ -340,6 +418,7 @@ class _UserHomePageState extends State<UserHomePage> {
                                                 color: Colors.grey,
                                               ),
                                             ),
+                                            _AromaChip(label: perfume.aroma),
                                           ],
                                         ),
                                       ],
@@ -383,8 +462,12 @@ class _SummaryCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: Row(
@@ -409,6 +492,31 @@ class _SummaryCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AromaChip extends StatelessWidget {
+  final String label;
+
+  const _AromaChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.accent,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

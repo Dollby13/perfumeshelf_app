@@ -7,6 +7,7 @@ class AppUser {
   final UserRole role;
   final String phone;
   final String bio;
+  final String profilePhoto;
 
   const AppUser({
     required this.name,
@@ -15,6 +16,7 @@ class AppUser {
     required this.role,
     this.phone = '',
     this.bio = '',
+    this.profilePhoto = '',
   });
 
   AppUser copyWith({
@@ -24,6 +26,7 @@ class AppUser {
     UserRole? role,
     String? phone,
     String? bio,
+    String? profilePhoto,
   }) {
     return AppUser(
       name: name ?? this.name,
@@ -32,6 +35,7 @@ class AppUser {
       role: role ?? this.role,
       phone: phone ?? this.phone,
       bio: bio ?? this.bio,
+      profilePhoto: profilePhoto ?? this.profilePhoto,
     );
   }
 }

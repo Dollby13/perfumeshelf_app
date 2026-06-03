@@ -77,64 +77,126 @@ class PerfumeDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Parfum')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: PerfumePhoto(
-                          imageUrl: perfume.imageUrl,
-                          width: 170,
-                          height: 210,
-                          borderRadius: 8,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      detailItem('Nama Parfum', perfume.namaParfum),
-                      detailItem('Merek', perfume.merek),
-                      detailItem('Aroma', perfume.aroma),
-                      detailItem('Ukuran', perfume.ukuran),
-                      detailItem('Konsentrasi', perfume.konsentrasi),
-                      detailItem('Status', perfume.status),
-                      detailItem('Catatan', perfume.catatan),
-                      const SizedBox(height: 24),
-                      Row(
+      body: Stack(
+        children: [
+          _DetailBackground(imageUrl: perfume.imageUrl),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => editPerfume(context),
-                              icon: const Icon(Icons.edit),
-                              label: const Text('Edit'),
+                          Center(
+                            child: PerfumePhoto(
+                              imageUrl: perfume.imageUrl,
+                              width: 170,
+                              height: 210,
+                              borderRadius: 8,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.danger,
+                          const SizedBox(height: 20),
+                          detailItem('Nama Parfum', perfume.namaParfum),
+                          detailItem('Merek', perfume.merek),
+                          detailItem('Aroma', perfume.aroma),
+                          detailItem('Ukuran', perfume.ukuran),
+                          detailItem('Konsentrasi', perfume.konsentrasi),
+                          detailItem('Status', perfume.status),
+                          detailItem('Catatan', perfume.catatan),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => editPerfume(context),
+                                  icon: const Icon(Icons.edit),
+                                  label: const Text('Edit'),
+                                ),
                               ),
-                              onPressed: () => confirmDelete(context),
-                              icon: const Icon(Icons.delete),
-                              label: const Text('Hapus'),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.danger,
+                                  ),
+                                  onPressed: () => confirmDelete(context),
+                                  icon: const Icon(Icons.delete),
+                                  label: const Text('Hapus'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailBackground extends StatelessWidget {
+  final String imageUrl;
+
+  const _DetailBackground({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundImage = imageUrl.trim().isEmpty
+        ? 'https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?auto=format&fit=crop&w=1600&q=80'
+        : imageUrl;
+
+    return Positioned.fill(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            backgroundImage,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                const ColoredBox(color: AppColors.background),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.background.withValues(alpha: 0.82),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: 0.48),
+                  AppColors.background.withValues(alpha: 0.88),
+                  AppColors.primaryDark.withValues(alpha: 0.10),
+                ],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topLeft,
+                radius: 1.2,
+                colors: [
+                  AppColors.secondary.withValues(alpha: 0.18),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
