@@ -25,13 +25,24 @@ class AppHeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.primaryDark,
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.26)),
-        ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: AppColors.secondary.withValues(alpha: 0.10),
+            blurRadius: 28,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
         child: Stack(
           children: [
             Positioned.fill(
@@ -63,7 +74,7 @@ class AppHeroSection extends StatelessWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.34),
+                  color: Colors.black.withValues(alpha: 0.30),
                 ),
               ),
             ),
@@ -75,7 +86,22 @@ class AppHeroSection extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.black.withValues(alpha: 0.08),
-                      Colors.black.withValues(alpha: 0.24),
+                      Colors.black.withValues(alpha: 0.28),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      AppColors.primaryDark.withValues(alpha: 0.74),
+                      AppColors.primaryDark.withValues(alpha: 0.32),
+                      Colors.black.withValues(alpha: 0.08),
                     ],
                   ),
                 ),
@@ -145,15 +171,15 @@ class AppHeroSection extends StatelessWidget {
                     width: isWide ? 172 : double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
+                      color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.24),
+                        color: Colors.white.withValues(alpha: 0.30),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.16),
-                          blurRadius: 18,
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 22,
                           offset: const Offset(0, 8),
                         ),
                       ],

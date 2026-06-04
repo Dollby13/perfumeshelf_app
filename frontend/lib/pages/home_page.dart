@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +11,7 @@ import '../models/perfume.dart';
 import '../services/auth_api.dart';
 import '../services/perfume_api.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_screen_background.dart';
 import '../widgets/perfume_photo.dart';
 import '../widgets/rating_stars.dart';
 import '../widgets/app_hero_section.dart';
@@ -27,7 +30,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final authApi = AuthApi();
-  final perfumeApi = PerfumeApi();
+  late final PerfumeApi perfumeApi;
   List<Perfume> perfumes = samplePerfumes();
   late AppUser currentUser;
   bool isLoading = true;
@@ -59,6 +62,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     currentUser = widget.user;
+    perfumeApi = PerfumeApi(token: currentUser.token);
     startHeroImageTimer();
     loadPerfumes();
   }
@@ -84,7 +88,7 @@ class _HomePageState extends State<HomePage> {
       final data = await perfumeApi.fetchPerfumes();
       if (!mounted) return;
       setState(() {
-        perfumes = data;
+        perfumes = data.isEmpty ? samplePerfumes() : data;
         isLoading = false;
       });
     } catch (_) {
@@ -213,6 +217,7 @@ class _HomePageState extends State<HomePage> {
       await authApi.banUser(
         name: review.reviewerName,
         email: review.reviewerEmail,
+        token: currentUser.token,
       );
       if (!mounted) return;
 
@@ -260,6 +265,59 @@ class _HomePageState extends State<HomePage> {
     }
 
     return users;
+  }
+
+  void showUserProfile(ReviewEntry entry) {
+    final review = entry.review;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Profil User'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _UserAvatar(
+                imageSource: review.reviewerPhoto,
+                radius: 42,
+                iconSize: 44,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                review.reviewerName,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                review.reviewerEmail.trim().isEmpty
+                    ? 'Email tidak tersedia'
+                    : review.reviewerEmail,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Komentar terakhir: ${entry.perfumeName}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget buildHomeContent() {
@@ -383,7 +441,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
             AppHeroSection(
-              eyebrow: 'Kelola coment',
+              eyebrow: 'Kelola komentar',
               title: 'Pantau komentar pengguna',
               description:
                   'Lihat komentar terbaru dan bersihkan komentar yang tidak sesuai dari ruang katalog PerfumeShelf.',
@@ -394,7 +452,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 18),
             const Text(
-              'Kelola Coment',
+              'Kelola Komentar',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -541,40 +599,46 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const CircleAvatar(
-                              backgroundColor: AppColors.primary,
-                              child: Icon(Icons.person, color: Colors.white),
+                            GestureDetector(
+                              onTap: () => showUserProfile(entry),
+                              child: _UserAvatar(
+                                imageSource: review.reviewerPhoto,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    review.reviewerName,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.textDark,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () => showUserProfile(entry),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      review.reviewerName,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.textDark,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    review.reviewerEmail.trim().isEmpty
-                                        ? 'Email tidak tersedia'
-                                        : review.reviewerEmail,
-                                    style: const TextStyle(
-                                      color: AppColors.textMuted,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      review.reviewerEmail.trim().isEmpty
+                                          ? 'Email tidak tersedia'
+                                          : review.reviewerEmail,
+                                      style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Komentar terakhir: ${entry.perfumeName}',
-                                    style: const TextStyle(
-                                      color: AppColors.textMuted,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Komentar terakhir: ${entry.perfumeName}',
+                                      style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -625,7 +689,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(icon: const Icon(Icons.person), onPressed: openProfile),
         ],
       ),
-      body: buildSelectedContent(),
+      body: AppScreenBackground(child: buildSelectedContent()),
       floatingActionButton: selectedIndex == 0
           ? FloatingActionButton(
               onPressed: addPerfume,
@@ -633,13 +697,16 @@ class _HomePageState extends State<HomePage> {
             )
           : null,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.98),
+          border: Border(
+            top: BorderSide(color: AppColors.primary.withValues(alpha: 0.08)),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, -2),
+              color: AppColors.primaryDark.withValues(alpha: 0.12),
+              blurRadius: 18,
+              offset: const Offset(0, -6),
             ),
           ],
         ),
@@ -659,7 +726,7 @@ class _HomePageState extends State<HomePage> {
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(
               icon: Icon(Icons.rate_review),
-              label: 'Kelola Coment',
+              label: 'Komentar',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.manage_accounts),
@@ -673,6 +740,50 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _UserAvatar extends StatelessWidget {
+  final String imageSource;
+  final double radius;
+  final double iconSize;
+
+  const _UserAvatar({
+    required this.imageSource,
+    this.radius = 26,
+    this.iconSize = 30,
+  });
+
+  Uint8List? photoBytes() {
+    if (!imageSource.startsWith('data:image')) return null;
+
+    final parts = imageSource.split(',');
+    if (parts.length < 2) return null;
+
+    try {
+      return base64Decode(parts.last);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bytes = photoBytes();
+    final trimmedSource = imageSource.trim();
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.primary,
+      backgroundImage: bytes != null
+          ? MemoryImage(bytes)
+          : trimmedSource.startsWith('http')
+          ? NetworkImage(trimmedSource)
+          : null,
+      child: bytes == null && !trimmedSource.startsWith('http')
+          ? Icon(Icons.person, color: Colors.white, size: iconSize)
+          : null,
     );
   }
 }

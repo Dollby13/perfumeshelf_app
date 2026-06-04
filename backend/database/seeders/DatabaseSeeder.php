@@ -16,12 +16,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        User::updateOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Admin PerfumeShelf',
                 'password' => Hash::make('admin123'),
                 'role' => 'admin',
+                'phone' => null,
+                'bio' => 'Akun demo admin untuk mengelola katalog parfum.',
+                'profile_photo' => null,
+                'is_banned' => false,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'tesuser@example.com'],
+            [
+                'name' => 'Tes User',
+                'password' => Hash::make('123456'),
+                'role' => 'user',
+                'phone' => null,
+                'bio' => 'Akun demo user untuk mencoba katalog dan review parfum.',
+                'profile_photo' => null,
+                'is_banned' => false,
             ]
         );
 
@@ -71,7 +88,7 @@ class DatabaseSeeder extends Seeder
         foreach ($perfumes as $perfume) {
             Perfume::updateOrCreate(
                 ['nama_parfum' => $perfume['nama_parfum']],
-                $perfume
+                array_merge($perfume, ['user_id' => $admin->id])
             );
         }
     }

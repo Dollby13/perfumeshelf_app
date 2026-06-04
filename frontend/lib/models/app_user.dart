@@ -8,6 +8,7 @@ class AppUser {
   final String phone;
   final String bio;
   final String profilePhoto;
+  final String token;
 
   const AppUser({
     required this.name,
@@ -17,6 +18,7 @@ class AppUser {
     this.phone = '',
     this.bio = '',
     this.profilePhoto = '',
+    this.token = '',
   });
 
   AppUser copyWith({
@@ -27,6 +29,7 @@ class AppUser {
     String? phone,
     String? bio,
     String? profilePhoto,
+    String? token,
   }) {
     return AppUser(
       name: name ?? this.name,
@@ -36,6 +39,7 @@ class AppUser {
       phone: phone ?? this.phone,
       bio: bio ?? this.bio,
       profilePhoto: profilePhoto ?? this.profilePhoto,
+      token: token ?? this.token,
     );
   }
 }

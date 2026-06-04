@@ -12,6 +12,8 @@ class SharedReviews {
     'Dior Sauvage': [
       PerfumeReview(
         reviewerName: 'Raka',
+        reviewerPhoto:
+            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
         rating: 5,
         comment: 'Fresh, maskulin, dan tahan lama untuk aktivitas sore.',
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
@@ -20,6 +22,8 @@ class SharedReviews {
     'Bleu de Chanel': [
       PerfumeReview(
         reviewerName: 'Nadia',
+        reviewerPhoto:
+            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
         rating: 4,
         comment: 'Aromanya bersih dan elegan, cocok untuk kantor.',
         createdAt: DateTime.now().subtract(const Duration(days: 1)),

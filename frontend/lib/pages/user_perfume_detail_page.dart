@@ -12,6 +12,7 @@ class UserPerfumeDetailPage extends StatefulWidget {
   final bool isGuest;
   final String reviewerName;
   final String reviewerEmail;
+  final String reviewerPhoto;
 
   const UserPerfumeDetailPage({
     super.key,
@@ -20,6 +21,7 @@ class UserPerfumeDetailPage extends StatefulWidget {
     this.isGuest = false,
     this.reviewerName = 'User PerfumeShelf',
     this.reviewerEmail = '',
+    this.reviewerPhoto = '',
   });
 
   @override
@@ -69,6 +71,7 @@ class _UserPerfumeDetailPageState extends State<UserPerfumeDetailPage> {
             ? 'User PerfumeShelf'
             : widget.reviewerName.trim(),
         reviewerEmail: widget.reviewerEmail,
+        reviewerPhoto: widget.reviewerPhoto,
         rating: rating,
         comment: reviewController.text.trim(),
         createdAt: DateTime.now(),

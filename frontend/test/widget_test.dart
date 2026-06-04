@@ -14,7 +14,7 @@ void main() {
     await tester.pumpWidget(const PerfumeShelfApp());
 
     expect(find.text('PerfumeShelf'), findsOneWidget);
-    expect(find.text('Koleksi Parfum Pribadi'), findsOneWidget);
+    expect(find.text('Ruang Komunitas Parfum'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();

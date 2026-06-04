@@ -12,6 +12,7 @@ class PerfumeShelfApp extends StatelessWidget {
       title: 'PerfumeShelf',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
         scaffoldBackgroundColor: AppColors.background,
         fontFamily: 'Roboto',
         colorScheme: ColorScheme.fromSeed(
@@ -20,20 +21,30 @@ class PerfumeShelfApp extends StatelessWidget {
           secondary: AppColors.accent,
           surface: AppColors.surface,
         ),
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: AppColors.primaryDark,
           foregroundColor: Colors.white,
           centerTitle: true,
-          elevation: 0,
+          elevation: 3,
+          scrolledUnderElevation: 4,
+          shadowColor: AppColors.primaryDark.withValues(alpha: 0.24),
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         cardTheme: CardThemeData(
-          color: AppColors.card,
-          elevation: 1.5,
-          shadowColor: Colors.black.withValues(alpha: 0.12),
+          color: AppColors.card.withValues(alpha: 0.96),
+          surfaceTintColor: Colors.white,
+          elevation: 4,
+          shadowColor: AppColors.primaryDark.withValues(alpha: 0.14),
+          clipBehavior: Clip.antiAlias,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.10)),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -45,13 +56,19 @@ class PerfumeShelfApp extends StatelessWidget {
           ),
           prefixIconColor: AppColors.primary,
           hintStyle: const TextStyle(color: AppColors.textMuted),
+          floatingLabelStyle: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: BorderSide(
+              color: AppColors.primary.withValues(alpha: 0.12),
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -64,21 +81,53 @@ class PerfumeShelfApp extends StatelessWidget {
             foregroundColor: Colors.white,
             disabledBackgroundColor: AppColors.border,
             disabledForegroundColor: AppColors.textMuted,
-            elevation: 0,
+            elevation: 2,
+            shadowColor: AppColors.primaryDark.withValues(alpha: 0.18),
             padding: const EdgeInsets.symmetric(vertical: 15),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.72),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.primaryDark,
+          contentTextStyle: const TextStyle(color: Colors.white),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
+          elevation: 5,
+          shape: CircleBorder(),
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: AppColors.surface,
           selectedItemColor: AppColors.primary,
           unselectedItemColor: AppColors.textMuted,
+          elevation: 12,
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w800),
+          unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+          selectedIconTheme: IconThemeData(size: 27),
+          unselectedIconTheme: IconThemeData(size: 24),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: AppColors.accent,
+          linearTrackColor: AppColors.border,
         ),
       ),
       home: const SplashPage(),
